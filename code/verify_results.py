@@ -1,0 +1,44 @@
+"""Check independent identities and selected stored outputs without rerunning simulations."""
+from pathlib import Path
+import json
+import numpy as np
+import networkx as nx
+from scipy.integrate import quad
+from core import f_z, psi, var_S
+
+# The single-contact limiting density is normalized and has the stated moments.
+for z in (-2.0, 0.0, 2.0):
+    norm = quad(lambda s: f_z(s, z), z, np.inf, epsabs=1e-11)[0]
+    m1 = quad(lambda s: s * f_z(s, z), z, np.inf, epsabs=1e-11)[0]
+    m2 = quad(lambda s: s * s * f_z(s, z), z, np.inf, epsabs=1e-11)[0]
+    np.testing.assert_allclose(norm, 1, atol=1e-10)
+    np.testing.assert_allclose(m2, 1 + psi(z), atol=1e-10)
+    np.testing.assert_allclose(m2 - m1 * m1, var_S(z), atol=1e-10)
+
+# KKT conditions and grounded covariance for the new incompatible cycle.
+L = nx.laplacian_matrix(nx.cycle_graph(8)).toarray().astype(float)
+x = np.array([1, .75, .5, .25, 0, .25, .5, .75])
+g = L @ x
+np.testing.assert_allclose(g, [.5, 0, 0, 0, -.5, 0, 0, 0], atol=1e-14)
+np.testing.assert_allclose(x @ L @ x, .5, atol=1e-14)
+F = [1, 2, 3, 5, 6, 7]
+C = np.linalg.inv(L[np.ix_(F, F)])
+np.testing.assert_allclose(C[0, 1], .5, atol=1e-14)
+np.testing.assert_allclose(C[0, 0] + C[1, 1] - 2*C[0, 1], .75, atol=1e-14)
+
+# Check the actual saved batch estimates and their reported uncertainties.
+rows = json.loads(Path('results/cycle_incompatible.json').read_text())
+assert [r['eps'] for r in rows] == [.1, .05, .025]
+for r in rows:
+    batches = np.array(r['batch_estimates'])
+    assert batches.shape == (16, 3)
+    np.testing.assert_allclose(batches.mean(0), r['mean'], rtol=1e-13, atol=1e-13)
+    np.testing.assert_allclose(batches.std(0, ddof=1) / 4, r['se'], rtol=1e-13, atol=1e-13)
+np.testing.assert_allclose(rows[-1]['mean'], [10, .5, .75], atol=.03, rtol=0)
+
+# The exact two-node calculations have the claimed values in the three regimes.
+two = json.loads(Path('results/two_node_check.json').read_text())
+np.testing.assert_allclose([two['0.01']['neg'], two['0.01']['zero'], two['0.01']['pos']],
+                           [1, 2, 3.9976], atol=.0001, rtol=0)
+print('Response-function integrals, cycle KKT/grounded covariance, stored batch results,')
+print('and two-node check passed.')

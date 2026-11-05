@@ -1,0 +1,5 @@
+# Validated with Python 3.9.6 for the cycle check and code smoke tests.
+numpy==2.0.2
+scipy==1.13.1
+networkx==3.2.1
+matplotlib==3.9.4

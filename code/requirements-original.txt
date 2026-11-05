@@ -1,0 +1,6 @@
+# Original manuscript experiments: Python 3.13, as recorded in Appendix B.
+numpy==2.5.3
+scipy==1.18.1
+networkx==3.7
+# Matplotlib version was not recorded in the original run.
+matplotlib
