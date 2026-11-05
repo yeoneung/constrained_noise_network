@@ -4,7 +4,7 @@ import json
 import numpy as np
 import networkx as nx
 from scipy.integrate import quad
-from core import f_z, psi, var_S
+from core import f_z, psi, var_S, mu
 
 # The single-contact limiting density is normalized and has the stated moments.
 for z in (-2.0, 0.0, 2.0):
@@ -40,5 +40,28 @@ np.testing.assert_allclose(rows[-1]['mean'], [10, .5, .75], atol=.03, rtol=0)
 two = json.loads(Path('results/two_node_check.json').read_text())
 np.testing.assert_allclose([two['0.01']['neg'], two['0.01']['zero'], two['0.01']['pos']],
                            [1, 2, 3.9976], atol=.0001, rtol=0)
+# The separately regenerated spatial dataset reproduces the manuscript's
+# reported rounded summary statistics; it is not the original figure input.
+with np.load('results/spatial.npz') as spatial:
+    R = spatial['R']
+    h = spatial['h']
+    pairs = np.triu_indices(len(h), 1)
+    profile = ((h[:, None] - h[None, :]) ** 2)[pairs]
+    np.testing.assert_allclose(R.max(), 1.7922, atol=0.00005, rtol=0)
+    np.testing.assert_allclose(np.mean(profile < .01), .4641, atol=0.00005, rtol=0)
+    errors, standard_errors = [], []
+    for z, expected in [(0., (0.9993, -0.5710)), (1., (2.9066, -0.7220))]:
+        raw = (spatial[f'raw_mean_{z}'] - R)[pairs]
+        centered = (spatial[f'cen_mean_{z}'] - R)[pairs]
+        slopes = [profile @ raw / (profile @ profile),
+                  profile @ centered / (profile @ profile)]
+        np.testing.assert_allclose(slopes, expected, atol=0.00005, rtol=0)
+        errors.extend([np.max(np.abs(raw - psi(z) * profile)),
+                       np.max(np.abs(centered - (psi(z) - mu(z)**2) * profile))])
+        standard_errors.extend([np.max(spatial[f'raw_se_{z}'][pairs]),
+                                np.max(spatial[f'cen_se_{z}'][pairs])])
+    np.testing.assert_allclose(max(errors), .0044, atol=.00005, rtol=0)
+    np.testing.assert_allclose(max(standard_errors), .0031, atol=.00005, rtol=0)
+
 print('Response-function integrals, cycle KKT/grounded covariance, stored batch results,')
-print('and two-node check passed.')
+print('two-node check, and regenerated spatial summaries passed.')
