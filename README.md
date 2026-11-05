@@ -1,6 +1,6 @@
 # Constrained noisy networks
 
-Code and numerical results for **“When hard constraints meet: effective resistance and stationary disagreement in noisy networks”**, by Yeoneung Kim and Junkee Jeon.
+Code and numerical results for **“When hard constraints meet: effective resistance and stationary disagreement in noisy networks”**, by Junkee Jeon and Yeoneung Kim.
 
 The scripts investigate a network of linearly coupled diffusions confined to individual intervals. They include exact two-node calculations, stationary samplers, a Gibbs check for an incompatible cycle, and simulations of reflected dynamics.
 
